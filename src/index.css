@@ -1,0 +1,36 @@
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+td,
+th {
+  padding: 0.4rem;
+  border: 1px solid #c9c9c9;
+  font-size: 14px;
+}
+
+.expander {
+  text-align: start;
+  display: flex;
+  align-items: center;
+}
+
+.toggle-expanded {
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Гарантируем, что бордеры не увеличивают ширину ячейки */
+.ag-center-cols-viewport {
+  box-sizing: border-box !important;
+}
+
+/* Убираем лишние отступы */
+.ag-header-cell {
+  padding: 0 10px !important;
+}
