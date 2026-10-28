@@ -138,7 +138,7 @@ interface TreeTableProps {
   data: RowData[];
 }
 
-export const TreeTable: React.FC<TreeTableProps> = ({ data }) => {
+const TreeTable: React.FC<TreeTableProps> = ({ data }) => {
   // 1. Состояние выбора строк (перенесено внутрь)
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
@@ -231,3 +231,5 @@ export const TreeTable: React.FC<TreeTableProps> = ({ data }) => {
     </Paper>
   );
 };
+
+export default TreeTable;

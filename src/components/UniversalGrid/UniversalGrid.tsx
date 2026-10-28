@@ -110,7 +110,7 @@ const SelectAllHeader: React.FC<SelectAllHeaderProps> = ({
   );
 };
 
-export const UniversalGrid = ({ 
+const UniversalGrid = ({ 
   data, 
   columns, 
   isTree, 
@@ -340,7 +340,7 @@ export const UniversalGrid = ({
   }
 
   const onGridReady = (params: { api: GridApi<GridRowData> }) => {
-    console.log("✅ Сетка готова");
+    console.log("Сетка готова");
   };
 
   const handleGetSelected = () => {
@@ -361,20 +361,15 @@ export const UniversalGrid = ({
       alert(`Редактирование строки: "${row?.name}"`);
       closeContextMenu();
     } else {
-      // Для кастомных пунктов просто логируем или вызываем callback, если добавишь его позже
       console.log('Кастомное действие:', action);
       closeContextMenu();
-      // Если хочешь, чтобы родительский компонент реагировал, можно добавить проп onMenuAction
+      // чтобы родительский компонент реагировал, можно добавить проп onMenuAction
     }
   };
 
   return (
-    <Box sx={{ padding: 3, maxWidth: 1200, margin: '0 auto' }}>
-      <Typography variant="h5" gutterBottom>
-        {isTree ? "Дерево (Иерархия)" : "Плоская таблица"}
-      </Typography>
-
-      <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
+    <Box sx={{ padding: 0, maxWidth: 1200, margin: 0 }}>
+      <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
         {isTree && showCheckboxes && (
           <>
             <Button variant="contained" onClick={handleGetSelected}>
@@ -403,7 +398,7 @@ export const UniversalGrid = ({
       </Stack>
 
       {isTree && showCheckboxes && (
-        <Box sx={{ mb: 2 }}>
+        <Box sx={{ mb: 1 }}>
           <Chip 
             label={`Выбрано элементов: ${selectedIds.length}`} 
             color="primary" 
@@ -478,3 +473,5 @@ export const UniversalGrid = ({
     </Box>
   );
 };
+
+export default UniversalGrid;

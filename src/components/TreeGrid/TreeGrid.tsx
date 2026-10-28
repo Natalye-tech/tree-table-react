@@ -42,7 +42,7 @@ const getDescendants = (parentId: string): string[] => {
   return descendants;
 };
 
-export const TreeGrid = () => {
+const TreeGrid = () => {
   const gridRef = useRef<AgGridReact<TreeRowData> | null>(null);
   
   const [expandedIds, setExpandedIds] = useState<string[]>(["1"]); 
@@ -56,12 +56,12 @@ export const TreeGrid = () => {
     if (checked) {
       newSet.add(id);
       const descendants = getDescendants(id);
-      console.log(`✅ Добавляем потомков для ${id}:`, descendants);
+      console.log(`Добавляем потомков для ${id}:`, descendants);
       descendants.forEach((dId) => newSet.add(dId));
     } else {
       newSet.delete(id);
       const descendants = getDescendants(id);
-      console.log(`❌ Удаляем потомков для ${id}:`, descendants);
+      console.log(`даляем потомков для ${id}:`, descendants);
       descendants.forEach((dId) => newSet.delete(dId));
     }
 
@@ -128,12 +128,9 @@ export const TreeGrid = () => {
 
   const visibleRowData = buildTreeOrder(null);
 
-  // 🔥 ГЛАВНОЕ ИСПРАВЛЕНИЕ: берем ID из data.id, а не из node.id
   const renderCheckboxCell = (params: any) => {
     const data = params.data; 
-    // Если вдруг data нет (редкий кейс при рендере), fallback на node, но приоритет data
-    const id = data?.id || params.node?.id; 
-    
+    const id = data?.id || params.node?.id;     
     const isChecked = selectedIds.includes(id);
 
     return (
@@ -178,7 +175,7 @@ export const TreeGrid = () => {
   ];
 
   const onGridReady = (params: { api: GridApi<TreeRowData> }) => {
-    console.log("✅ Сетка готова");
+    console.log("Сетка готова");
   };
 
   const handleGetSelected = () => {
@@ -218,9 +215,6 @@ export const TreeGrid = () => {
           color="primary" 
           sx={{ fontWeight: 'bold' }} 
         />
-        <Box sx={{ ml: 2, fontSize: '0.9rem', color: 'text.secondary' }}>
-          💡 Открой консоль браузера (F12) и смотри логи "🔧 Клик по ID".
-        </Box>
       </Box>
 
       <div 
@@ -239,3 +233,5 @@ export const TreeGrid = () => {
     </Box>
   );
 };
+
+export default TreeGrid;
