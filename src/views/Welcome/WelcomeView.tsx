@@ -139,16 +139,10 @@ export const WelcomeView: React.FC = () => {
     [],
   );
 
-  // Стейт родителя: хранит ID выбранных элементов
   const [selectedParentIds, setSelectedParentIds] = useState<number[]>([]);
 
-  // Функция, которую передадим вниз. Она получит ID от ребенка
   const handleOnSelectIds = (ids: number[]) => {
-    console.log('🎉 Родитель получил ID:', ids);
     setSelectedParentIds(ids);
-    
-    // Пример: тут можно сразу вызвать API
-    // api.deleteItems(ids);
   };
 
   return (

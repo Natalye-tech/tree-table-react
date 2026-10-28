@@ -19,8 +19,6 @@ export const MRTTree = <T extends MRT_RowData & { id: number }>({
   onSelectIds,
 }: MRTTreeProps<T>) => {
   const tableColumns = useMemo(() => columns, [columns]);
-
-  // Локальный стейт для хранения ID выбранных строк
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   const table = useMaterialReactTable({
