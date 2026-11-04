@@ -4,7 +4,6 @@ import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import { ValueFormatterParams } from 'ag-grid-community';
 import { TreeTable } from '../../components/TreeTable';
 import { RowData, ColumnTreeData } from '../../components/TreeTable/types';
-import MRTTree from '../../components/MRTTree/MRTTree';
 import { UniversalGrid } from '../../components/UniversalGrid';
 import type { MRT_ColumnDef } from 'material-react-table';
 import type { MRT_RowSelectionState } from 'material-react-table'; // Правильный импорт
@@ -38,65 +37,6 @@ const fileTree: RowData[] = [
   },
 ];
 
-
-
-/// ***************************** MRTTree
-
-type Person = {
-  id: number;
-  firstName: string;
-  lastName: string;
-  address: string;
-  city: string;
-  state: string;
-  subRows?: Person[];
-};
-
-const initialData: Person[] = [
-  {
-    id: 1,
-    firstName: 'Dylan',
-    lastName: 'Murray',
-    address: '261 Erdman Ford',
-    city: 'East Daphne',
-    state: 'Kentucky',
-    subRows: [
-      { 
-        id: 2, 
-        firstName: 'Ervin', 
-        lastName: 'Reinger', 
-        address: '566 Brakus Inlet', 
-        city: 'South Linda', 
-        state: 'West Virginia',
-        subRows: [
-          { 
-            id: 4, 
-            firstName: 'Brittanyqqq', 
-            lastName: 'McCulloughqqq', 
-            address: '722 Emie Streamqqq', 
-            city: 'Lincoln', 
-            state: 'Nebraskaqqq' },
-          { 
-            id: 5, 
-            firstName: 'Brittanyqqqww', 
-            lastName: 'McCulloughqqqww', 
-            address: '722 Emie Streamqqqww', 
-            city: 'Lincolnww', 
-            state: 'Nebraskaqqqww' },
-        ] 
-      },
-      { 
-        id: 3, 
-        firstName: 'Brittany', 
-        lastName: 'McCullough', 
-        address: '722 Emie Stream', 
-        city: 'Lincoln', 
-        state: 'Nebraska' },
-    ],
-  },
-  { id: 4, firstName: 'Raquel', lastName: 'Kohler', address: '769 Dominic Grove', city: 'Columbus', state: 'Ohio' },
-];
-
 /// ***************************** ag-grid
 // Пример данных
 const serverData = [
@@ -126,25 +66,6 @@ const serverColumns = [
 
 export const WelcomeView: React.FC = () => {
 
-/// ***************************** MRTTree
-  // Колонки
-  const columns1 = useMemo<MRT_ColumnDef<Person>[]>(
-    () => [
-      { accessorKey: 'firstName', header: 'First Name' },
-      { accessorKey: 'lastName', header: 'Last Name' },
-      { accessorKey: 'address', header: 'Address' },
-      { accessorKey: 'city', header: 'City' },
-      { accessorKey: 'state', header: 'State' },
-    ],
-    [],
-  );
-
-  const [selectedParentIds, setSelectedParentIds] = useState<number[]>([]);
-
-  const handleOnSelectIds = (ids: number[]) => {
-    setSelectedParentIds(ids);
-  };
-
   return (
     <Stack sx={{ m: 4 }} spacing={4}>
 
@@ -152,16 +73,6 @@ export const WelcomeView: React.FC = () => {
         Дерево-таблица tanstack table
       </Typography>
       <TreeTable data={fileTree} />
-
-
-      <Typography variant="h6">
-        Дерево-таблица material-react-table
-      </Typography>
-      <MRTTree
-        data={initialData}
-        columns={columns1}
-        onSelectIds={handleOnSelectIds}
-      />
 
       <Typography variant="h6">
         Дерево-таблица AG Grid

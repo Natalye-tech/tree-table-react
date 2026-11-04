@@ -1,11 +1,10 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import WelcomeView from './views/Welcome';
-
+import  ParentPage from './views/ParentPage/ParentPageServer';
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<WelcomeView />} />
+        <Route path="/" element={<ParentPage />} />
       </Routes>
     </Router>
   );

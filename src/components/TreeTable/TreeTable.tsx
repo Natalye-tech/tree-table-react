@@ -173,7 +173,6 @@ const TreeTable: React.FC<TreeTableProps> = ({ data }) => {
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header, index) => {
-                console.log(' ==== header ', header);
                 return (
                 <TableCell
                   key={header.id}

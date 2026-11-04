@@ -1,3 +1,3 @@
-import MRTTree from './MRTTree';
+import Tree from './Tree';
 
-export { MRTTree as default, MRTTree };
+export { Tree as default, Tree };

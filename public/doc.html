@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>MRTTree — мануал по настройке тулбара</title>
+<style>
+  body { font-family: 'Calibri', sans-serif; font-size: 11pt; line-height: 1.4; margin: 2cm; }
+  h1 { color: #1976d2; border-bottom: 2px solid #1976d2; padding-bottom: 6px; }
+  h2 { color: #1976d2; margin-top: 24px; border-bottom: 1px solid #90caf9; padding-bottom: 4px; }
+  h3 { color: #424242; margin-top: 18px; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 10pt; }
+  th { background: #e3f2fd; border: 1px solid #90caf9; padding: 6px 8px; text-align: left; }
+  td { border: 1px solid #cfd8dc; padding: 6px 8px; vertical-align: top; }
+  code { background: #f5f5f5; padding: 2px 4px; font-family: 'Consolas', monospace; font-size: 10pt; border-radius: 3px; }
+  pre { background: #f5f5f5; padding: 10px; border-left: 3px solid #1976d2; overflow-x: auto; font-family: 'Consolas', monospace; font-size: 9.5pt; }
+  .note { background: #fff8e1; border-left: 3px solid #ffb300; padding: 8px 12px; margin: 12px 0; }
+  .warn { background: #ffebee; border-left: 3px solid #e53935; padding: 8px 12px; margin: 12px 0; }
+  .ok { background: #e8f5e9; border-left: 3px solid #43a047; padding: 8px 12px; margin: 12px 0; }
+  ul, ol { margin: 8px 0 8px 20px; }
+</style>
+</head>
+<body>
+
+<h1>MRTTree — мануал по настройке тулбара</h1>
+
+<div class="ok">
+<b>Главный принцип:</b> весь тулбар настраивается в одном месте — <code>createToolbarConfig({...})</code> в <code>ParentPage.tsx</code>. JSX тулбара (в <code>ToolbarConfig.tsx</code>) правится только при добавлении принципиально новых элементов.
+</div>
+
+<h2>1. Где что лежит</h2>
+
+<table>
+<tr><th>Файл</th><th>Что содержит</th><th>Когда трогать</th></tr>
+<tr><td><code>ToolbarConfig.tsx</code></td><td><code>DENSITIES</code>, <code>createToolbarConfig&lt;TData&gt;</code>, стандартный рендер правой панели</td><td>Добавление новой кнопки / режима плотности</td></tr>
+<tr><td><code>Tree.tsx</code></td><td><code>compactToolbarSx</code>, обёртка <code>renderToolbarInternalActions</code>, поиск, ленивая загрузка, фон строк</td><td>Глобальные стили тулбара, иконка/поле поиска</td></tr>
+<tr><td><code>Types.ts</code></td><td><code>MRTTreeToolbarOptions&lt;TData&gt;</code>, <code>MRTTreeProps&lt;TData&gt;</code></td><td>Добавление новой опции</td></tr>
+<tr><td><code>ParentPage.tsx</code></td><td>Вызов <code>createToolbarConfig({...})</code>, загрузка корней</td><td>Все настройки тулбара</td></tr>
+<tr><td><code>TemplateTypes.ts</code></td><td>Тип <code>Template</code></td><td>Замена типа пользовательских данных</td></tr>
+<tr><td><code>api.ts</code></td><td><code>fetchRoots</code>, <code>fetchChildren</code></td><td>Серверная загрузка (если нужна)</td></tr>
+</table>
+
+<h3>Поток данных</h3>
+<pre>ParentPage.tsx
+  │  createToolbarConfig({ ...все настройки тулбара... })
+  ▼
+MRTTreeToolbarOptions&lt;TData&gt;
+  │  → prop toolbar
+  ▼
+&lt;MRTTree&lt;Template&gt; toolbar={toolbar} /&gt;
+  │  Tree.tsx: спред в useMaterialReactTable + обёртка renderToolbarInternalActions
+  ▼
+MaterialReactTable рендерит тулбар</pre>
+
+<h2>2. Полный список опций MRTTreeToolbarOptions</h2>
+
+<p>Все опции можно передать напрямую в <code>createToolbarConfig({...})</code>. Если не переданы — используются дефолты фабрики.</p>
+
+<h3>2.1 Видимость тулбаров</h3>
+<table>
+<tr><th>Опция</th><th>Тип</th><th>По умолч.</th><th>Что делает</th></tr>
+<tr><td><code>enableTopToolbar</code></td><td>boolean</td><td>true</td><td>Показывать верхнюю панель</td></tr>
+<tr><td><code>enableBottomToolbar</code></td><td>boolean</td><td>false</td><td>Показывать нижнюю панель (пагинация)</td></tr>
+</table>
+
+<h3>2.2 Встроенные кнопки MRT</h3>
+<table>
+<tr><th>Опция</th><th>Тип</th><th>По умолч.</th><th>Что делает</th></tr>
+<tr><td><code>enableDensityToggle</code></td><td>boolean</td><td>false</td><td>Стандартная кнопка плотности MRT</td></tr>
+<tr><td><code>enableFullScreenToggle</code></td><td>boolean</td><td>false</td><td>Стандартная кнопка fullscreen MRT</td></tr>
+<tr><td><code>enableColumnVisibility</code></td><td>boolean</td><td>false</td><td>Кнопка «колонки» (чек-лист скрытия)</td></tr>
+<tr><td><code>enableHiding</code></td><td>boolean</td><td>true</td><td>Разрешить скрывать колонки</td></tr>
+</table>
+<div class="note">В проекте <code>enableDensityToggle</code> и <code>enableFullScreenToggle</code> равны <code>false</code> — вместо них свои кнопки в <code>ToolbarConfig.tsx</code>. Если включить эти опции, появятся дубли в правой панели.</div>
+
+<h3>2.3 Поиск и фильтрация</h3>
+<table>
+<tr><th>Опция</th><th>Тип</th><th>По умолч.</th><th>Что делает</th></tr>
+<tr><td><code>enableGlobalFilter</code></td><td>boolean</td><td>true</td><td>Механизм глобального поиска</td></tr>
+<tr><td><code>enableColumnFilters</code></td><td>boolean</td><td>true</td><td>Фильтры в шапке колонок</td></tr>
+<tr><td><code>enableFilters</code></td><td>boolean</td><td>true</td><td>Общий выключатель фильтрации</td></tr>
+<tr><td><code>enableGlobalFilterModes</code></td><td>boolean</td><td>false</td><td>Переключатель режимов поиска (fuzzy / contains / startsWith / equalsString)</td></tr>
+</table>
+
+<h3>2.4 Расположение элементов</h3>
+<table>
+<tr><th>Опция</th><th>Тип</th><th>По умолч.</th><th>Что делает</th></tr>
+<tr><td><code>positionToolbarAlertBanner</code></td><td>'head-overlay' | 'bottom' | 'none'</td><td>'none'</td><td>Баннер «Выбрано N» от MRT (у нас свой счётчик)</td></tr>
+<tr><td><code>positionGlobalFilter</code></td><td>'left' | 'right' | 'none'</td><td>'none'</td><td>Автопозиция поля поиска MRT</td></tr>
+</table>
+
+<h3>2.5 Поиск — свои опции</h3>
+<table>
+<tr><th>Опция</th><th>Тип</th><th>По умолч.</th><th>Что делает</th></tr>
+<tr><td><code>showSearchButton</code></td><td>boolean</td><td>true</td><td>Показывать иконку-лупу поиска</td></tr>
+<tr><td><code>initialShowSearch</code></td><td>boolean</td><td>false</td><td>Показать поле поиска сразу при рендере</td></tr>
+</table>
+
+<h3>2.6 Видимость элементов правой панели (новое)</h3>
+
+<p>Каждый флаг управляет отдельным элементом внутри <code>defaultRender</code> в <code>ToolbarConfig.tsx</code>.</p>
+
+<table>
+<tr><th>Опция</th><th>Тип</th><th>По умолч.</th><th>Скрывает</th></tr>
+<tr><td><code>showFiltersButton</code></td><td>boolean</td><td>true</td><td>Кнопку фильтров колонок (<code>&lt;MRT_ToggleFiltersButton&gt;</code>)</td></tr>
+<tr><td><code>showSelectionCounter</code></td><td>boolean</td><td>true</td><td>Счётчик «Выбрано: N из M»</td></tr>
+<tr><td><code>showSelectionToggle</code></td><td>boolean</td><td>false</td><td>ToggleButtonGroup режима выделения (checkbox / radio / none)</td></tr>
+<tr><td><code>showDensityButton</code></td><td>boolean</td><td>true</td><td>Кнопку переключения плотности</td></tr>
+<tr><td><code>showThemeButton</code></td><td>boolean</td><td>true</td><td>Кнопку переключения темы</td></tr>
+<tr><td><code>showFullscreenButton</code></td><td>boolean</td><td>true</td><td>Кнопку полноэкранного режима</td></tr>
+</table>
+
+<div class="ok">
+<b>Всё управляется из <code>ParentPage.tsx</code>!</b><br>
+Например, чтобы скрыть кнопку фильтров, не нужно лезть в JSX <code>ToolbarConfig.tsx</code> — достаточно <code>createToolbarConfig({ showFiltersButton: false, ... })</code>.
+</div>
+
+<h3>2.7 Кастомный рендер</h3>
+<table>
+<tr><th>Опция</th><th>Аргументы</th><th>Что делает</th></tr>
+<tr><td><code>renderTopToolbarCustomActions</code></td><td>{ table }</td><td>Элементы слева в верхнем тулбаре (свои кнопки)</td></tr>
+<tr><td><code>renderToolbarInternalActions</code></td><td>{ table }</td><td>Правая панель. Если передать — заменяет стандартный рендер фабрики (флаги <code>showX</code> перестают работать)</td></tr>
+<tr><td><code>renderBottomToolbarCustomActions</code></td><td>{ table }</td><td>Элементы в нижнем тулбаре</td></tr>
+<tr><td><code>renderTopToolbar</code></td><td>{ table }</td><td>Полностью заменить верхний тулбар</td></tr>
+<tr><td><code>renderBottomToolbar</code></td><td>{ table }</td><td>Полностью заменить нижний тулбар</td></tr>
+</table>
+
+<h3>2.8 Стили контейнеров</h3>
+<table>
+<tr><th>Опция</th><th>Тип</th><th>Что делает</th></tr>
+<tr><td><code>muiTopToolbarProps</code></td><td>{ sx, elevation, ... }</td><td>MUI-пропсы для Paper верхнего тулбара</td></tr>
+<tr><td><code>muiBottomToolbarProps</code></td><td>то же</td><td>То же для нижнего</td></tr>
+</table>
+
+<h2>3. DENSITIES — режимы плотности</h2>
+
+<pre>export type Density = {
+  key: 'compact' | 'normal' | 'comfortable';
+  label: string;
+  Icon: typeof DensitySmallIcon;
+  rowHeight: number;
+  headerHeight: number;
+  checkboxSize: 'small' | 'medium';
+};
+
+export const DENSITIES: readonly Density[] = [
+  { key: 'compact',     label: 'Компактно', Icon: DensitySmallIcon,  rowHeight: 28, headerHeight: 28, checkboxSize: 'small'  },
+  { key: 'normal',      label: 'Обычно',    Icon: DensityMediumIcon, rowHeight: 34, headerHeight: 32, checkboxSize: 'small'  },
+  { key: 'comfortable', label: 'Просторно', Icon: DensityLargeIcon,  rowHeight: 48, headerHeight: 40, checkboxSize: 'medium' },
+];</pre>
+
+<h3>Как добавить свой режим</h3>
+<ol>
+<li>В <code>ToolbarConfig.tsx</code> добавьте элемент в массив <code>DENSITIES</code>.</li>
+<li>Если <code>key</code> новый — расширьте тип <code>Density['key']</code>.</li>
+<li>Больше ничего менять не нужно — <code>ParentPage</code> автоматически циклически перебирает <code>DENSITIES.length</code>.</li>
+</ol>
+
+<h2>4. createToolbarConfig — аргументы</h2>
+
+<p><code>ToolbarConfigOptions</code> = <code>Partial&lt;MRTTreeToolbarOptions&lt;TData&gt;&gt; &amp; { обязательные спец-поля }</code>. То есть <b>любую</b> опцию тулбара можно передать напрямую. Плюс обязательны спец-поля:</p>
+
+<table>
+<tr><th>Аргумент</th><th>Тип</th><th>Что делать</th></tr>
+<tr><td><code>density</code></td><td>Density</td><td>Текущий режим: <code>DENSITIES[densityIndex]</code></td></tr>
+<tr><td><code>nextDensity</code></td><td>Density</td><td><code>DENSITIES[(densityIndex + 1) % DENSITIES.length]</code> — для tooltip</td></tr>
+<tr><td><code>onDensityClick</code></td><td>() =&gt; void</td><td>Циклическое переключение: <code>() =&gt; setDensityIndex(i =&gt; (i + 1) % DENSITIES.length)</code></td></tr>
+<tr><td><code>selectionMode</code></td><td>SelectionMode</td><td>Текущий режим (<code>'checkbox' | 'radio' | 'none'</code>)</td></tr>
+<tr><td><code>onSelectionModeChange</code></td><td>(mode) =&gt; void</td><td>Обычно <code>setSelectionMode</code></td></tr>
+<tr><td><code>showSelectionToggle</code></td><td>boolean</td><td>Показывать ToggleButtonGroup режима</td></tr>
+<tr><td><code>themeMode</code></td><td>'light' | 'dark'</td><td>Текущая тема</td></tr>
+<tr><td><code>onThemeToggle</code></td><td>() =&gt; void</td><td><code>() =&gt; setThemeMode(m =&gt; m === 'light' ? 'dark' : 'light')</code></td></tr>
+</table>
+
+<h3>Приоритеты значений</h3>
+<ol>
+<li><b>Дефолты фабрики</b> (<code>enableTopToolbar: true</code>, <code>enableBottomToolbar: false</code> и т.д.)</li>
+<li><b>Всё, что передано в options</b> — перекрывает дефолты через <code>...overrides</code></li>
+<li><b><code>renderToolbarInternalActions</code></b>: если передан пользователем — побеждает стандартный <code>defaultRender</code></li>
+</ol>
+
+<h2>5. Частые сценарии — всё через конфиг</h2>
+
+<h3>Скрыть кнопку фильтров колонок</h3>
+<pre>createToolbarConfig&lt;Template&gt;({
+  ...
+  showFiltersButton: false,
+});</pre>
+
+<h3>Скрыть счётчик выбранных строк</h3>
+<pre>createToolbarConfig&lt;Template&gt;({
+  ...
+  showSelectionCounter: false,
+});</pre>
+
+<h3>Скрыть кнопку плотности</h3>
+<pre>showDensityButton: false,</pre>
+
+<h3>Скрыть кнопку темы</h3>
+<pre>showThemeButton: false,</pre>
+
+<h3>Скрыть кнопку fullscreen</h3>
+<pre>showFullscreenButton: false,</pre>
+
+<h3>Скрыть иконку поиска</h3>
+<pre>showSearchButton: false,</pre>
+
+<h3>Показать поле поиска сразу</h3>
+<pre>initialShowSearch: true,</pre>
+
+<h3>Показать нижний тулбар</h3>
+<pre>enableBottomToolbar: true,</pre>
+
+<h3>Скрыть весь тулбар</h3>
+<pre>enableTopToolbar: false,</pre>
+
+<h3>Добавить кнопку «Экспорт» слева</h3>
+<pre>createToolbarConfig&lt;Template&gt;({
+  ...
+  renderTopToolbarCustomActions: ({ table }) =&gt; (
+    &lt;Button onClick={() =&gt; {
+      const rows = table.getRowModel().flatRows.map(r =&gt; r.original);
+      console.log('Экспорт', rows);
+    }}&gt;Экспорт&lt;/Button&gt;
+  ),
+});</pre>
+
+<h3>Добавить кнопку «Удалить выбранные» в правую панель</h3>
+
+<p>Поскольку <code>renderToolbarInternalActions</code> уже используется фабрикой, для «своей» кнопки справа нужно передать свой рендер:</p>
+
+<pre>createToolbarConfig&lt;Template&gt;({
+  ...,
+  renderToolbarInternalActions: ({ table }) =&gt; {
+    const selectedCount = Object.keys(table.getState().rowSelection).length;
+    return (
+      &lt;&gt;
+        {selectedCount &gt; 0 &amp;&amp; (
+          &lt;Button size="small" color="error"
+            onClick={() =&gt; console.log(Object.keys(table.getState().rowSelection))}&gt;
+            Удалить ({selectedCount})
+          &lt;/Button&gt;
+        )}
+      &lt;/&gt;
+    );
+  },
+});</pre>
+<div class="warn">Передача своего <code>renderToolbarInternalActions</code> полностью убирает стандартные кнопки (фильтры, счётчик, плотность, тема, fullscreen) — их нужно отрисовать вручную, если они нужны.</div>
+
+<h3>Заменить весь верхний тулбар своим</h3>
+<pre>renderTopToolbar: ({ table }) =&gt; (
+  &lt;Stack direction="row" spacing={2} sx={{ p: 1 }}&gt;
+    &lt;Typography variant="h6"&gt;Своя панель&lt;/Typography&gt;
+    &lt;Button onClick={() =&gt; table.setExpanded({})}&gt;Свернуть&lt;/Button&gt;
+  &lt;/Stack&gt;
+),</pre>
+
+<h2>6. Высота, отступы и центрирование контента</h2>
+
+<h3>Где менять высоту тулбара</h3>
+
+<p>В <code>Tree.tsx</code> — константа <code>compactToolbarSx</code>:</p>
+
+<pre>const compactToolbarSx = {
+  minHeight: 43,
+  height: 43,
+  paddingTop: 0,
+  paddingBottom: 0,
+  display: 'flex',
+  alignItems: 'center',
+  ...
+};</pre>
+
+<h3>Как сдвинуть контент по вертикали</h3>
+
+<p>Padding на контейнере не даёт эффекта — flex-центрирование возвращает контент в центр. Сдвиг делается через <code>paddingBottom</code> на <code>Stack</code> внутри <code>renderToolbarInternalActions</code>:</p>
+
+<pre>// Tree.tsx, внутри Stack в renderToolbarInternalActions:
+height: '100%',
+paddingBottom: '2px',  // ← сдвигает контент вверх на 1px</pre>
+
+<table>
+<tr><th><code>paddingBottom</code> на Stack</th><th>Отступ сверху / снизу</th></tr>
+<tr><td><code>0</code></td><td>7.5px / 7.5px (симметрично)</td></tr>
+<tr><td><code>'2px'</code> (текущее)</td><td>6.5px / 8.5px</td></tr>
+<tr><td><code>'4px'</code></td><td>5.5px / 9.5px</td></tr>
+</table>
+
+<h2>7. Стилизация — где что менять</h2>
+
+<table>
+<tr><th>Что</th><th>Где</th></tr>
+<tr><td>Высота / отступы тулбара</td><td>Tree.tsx → compactToolbarSx + Stack paddingBottom</td></tr>
+<tr><td>Выравнивание иконок по вертикали</td><td>Tree.tsx → Stack sx</td></tr>
+<tr><td>Стиль поля поиска</td><td>Tree.tsx → MRT_GlobalFilterTextField sx</td></tr>
+<tr><td>Размер иконок кнопок</td><td>Tree.tsx → Stack sx → &amp;.MuiIconButton-root</td></tr>
+<tr><td>Стиль ToggleButtonGroup</td><td>Tree.tsx → Stack sx → &amp;.MuiToggleButton-root</td></tr>
+<tr><td>Стиль счётчика</td><td>ToolbarConfig.tsx → Typography sx</td></tr>
+<tr><td>Стиль кнопки фильтров</td><td>ToolbarConfig.tsx → обернуть в Box sx</td></tr>
+<tr><td>Фон тулбара</td><td>ParentPage → muiTopToolbarProps.sx</td></tr>
+<tr><td>Набор кнопок в правой панели</td><td>ParentPage → флаги showX в createToolbarConfig</td></tr>
+<tr><td>Фон шапки таблицы</td><td>Tree.tsx → headerBg (авто по теме)</td></tr>
+</table>
+
+<h2>8. Чек-лист при добавлении элемента в тулбар</h2>
+<ol>
+<li><b>Нужна новая опция?</b> → добавить в <code>Types.ts</code> в <code>MRTTreeToolbarOptions&lt;TData&gt;</code>.</li>
+<li><b>Логика кнопки (обработчик, состояние)?</b> → в <code>ParentPage.tsx</code>: <code>useState</code> + передать в <code>createToolbarConfig</code>.</li>
+<li><b>Отрисовка кнопки?</b> → в <code>ToolbarConfig.tsx</code> в <code>defaultRender</code> + обернуть в <code>{flag &amp;&amp; ...}</code>, если нужен флаг видимости.</li>
+<li><b>Глобальный стиль / позиционирование?</b> → в <code>Tree.tsx</code> в <code>Stack sx</code>.</li>
+<li><b>Только для страницы?</b> → <code>renderTopToolbarCustomActions</code> в <code>createToolbarConfig</code>.</li>
+</ol>
+
+<h2>9. Карта ответственности</h2>
+
+<pre>┌─────────────────────────────────────────────────┐
+│  ParentPage.tsx                                 │
+│  • состояния: densityIndex, selectionMode, theme│
+│  • загрузка корней с сервера                    │
+│  • ВСЕ настройки тулбара — в одном вызове       │
+│    createToolbarConfig({...})                   │
+│  • передача в MRTTree.toolbar                   │
+└──────────────────────┬──────────────────────────┘
+                       ▼
+┌─────────────────────────────────────────────────┐
+│  ToolbarConfig.tsx                              │
+│  • DENSITIES[] — режимы плотности               │
+│  • createToolbarConfig() → MRTTreeToolbarOptions│
+│  • defaultRender — стандартная правая панель    │
+│    (управляется флагами showX из options)       │
+└──────────────────────┬──────────────────────────┘
+                       ▼
+┌─────────────────────────────────────────────────┐
+│  Tree.tsx                                       │
+│  • compactToolbarSx — стили контейнера          │
+│  • обёртка renderToolbarInternalActions         │
+│  • иконка-лупа + поле поиска                    │
+│  • ленивая загрузка детей                       │
+│  • кастомный фон строк                          │
+└─────────────────────────────────────────────────┘</pre>
+
+<div class="ok">
+<b>Правило:</b><br>
+• «Что и как настроить» → <code>ParentPage.tsx</code> (аргументы <code>createToolbarConfig</code>)<br>
+• «Как выглядит» → <code>Tree.tsx</code> (стили контейнера тулбара)<br>
+• «Как получить данные» → <code>api.ts</code><br>
+• «Добавить новый элемент» → <code>ToolbarConfig.tsx</code> + новый флаг в <code>Types.ts</code>
+</div>
+
+<h2>10. Как менять цвет фона строк</h2>
+
+<h3>10.1 Механизм</h3>
+
+<p>В <code>&lt;MRTTree&gt;</code> передаётся функция <code>getRowBackgroundColor(row)</code>, возвращающая CSS-цвет или <code>undefined</code>:</p>
+
+<pre>&lt;MRTTree&lt;Template&gt;
+  ...
+  getRowBackgroundColor={(row) =&gt; /* вернуть цвет или undefined */}
+/&gt;</pre>
+
+<table>
+<tr><th>Возврат</th><th>Результат</th></tr>
+<tr><td><code>'rgba(...)'</code>, <code>'#hex'</code>, <code>'hsl(...)'</code></td><td>Строка получает этот фон</td></tr>
+<tr><td><code>undefined</code></td><td>Стандартный фон (тема)</td></tr>
+</table>
+
+<p>При <code>hover</code> и <code>selected</code> с кастомным фоном применяется <code>filter: brightness()</code> — цвет не «прыгает», но визуальная обратная связь работает.</p>
+
+<h3>10.2 По полю из данных</h3>
+<pre>const getRowBackgroundColor = (row: Template): string | undefined =&gt; {
+  switch (row.status) {
+    case 'active':   return 'rgba(76, 175, 80, 0.08)';
+    case 'archived': return 'rgba(158, 158, 158, 0.10)';
+    case 'draft':    return 'rgba(255, 152, 0, 0.08)';
+    default:         return undefined;
+  }
+};</pre>
+
+<h3>10.3 По уровню вложенности</h3>
+<pre>const getRowBackgroundColor = (row: Template): string | undefined =&gt; {
+  if (row.managerId === null) return 'rgba(25, 118, 210, 0.08)';
+  return undefined;
+};</pre>
+
+<h3>10.4 Зебра</h3>
+<pre>const getRowBackgroundColor = (row: Template): string | undefined =&gt;
+  row.id % 2 === 0 ? 'rgba(0, 0, 0, 0.03)' : undefined;</pre>
+
+<h3>10.5 Цвет прямо в данных</h3>
+<pre>// TemplateTypes.ts
+export type Template = {
+  id: number;
+  name: string;
+  managerId: number | null;
+  subRows?: Template[];
+  color?: string; // ← цвет строки
+};
+
+// ParentPage.tsx
+const getRowBackgroundColor = (row: Template): string | undefined =&gt;
+  row.color;</pre>
+
+<h3>10.6 Готовая палитра</h3>
+<table>
+<tr><th>Оттенок</th><th>rgba</th></tr>
+<tr><td>Синий</td><td><code>rgba(25, 118, 210, 0.08)</code></td></tr>
+<tr><td>Зелёный</td><td><code>rgba(76, 175, 80, 0.08)</code></td></tr>
+<tr><td>Оранжевый</td><td><code>rgba(255, 152, 0, 0.10)</code></td></tr>
+<tr><td>Красный</td><td><code>rgba(244, 67, 54, 0.10)</code></td></tr>
+<tr><td>Жёлтый</td><td><code>rgba(255, 235, 59, 0.10)</code></td></tr>
+<tr><td>Фиолетовый</td><td><code>rgba(156, 39, 176, 0.08)</code></td></tr>
+<tr><td>Серый</td><td><code>rgba(0, 0, 0, 0.04)</code></td></tr>
+</table>
+
+<h3>10.7 Важно</h3>
+<ul>
+<li>Используйте <code>rgba</code> с низким alpha (0.04–0.12) — работает и в светлой, и в тёмной теме.</li>
+<li>Сплошной цвет (<code>#ffebee</code>) в тёмной теме сделает текст невидимым.</li>
+<li>Фон применяется ко всей строке (все <code>&lt;td&gt;</code>), потому что задаётся на <code>&lt;tr&gt;</code>.</li>
+<li>Если нужен фон <b>только одной колонки</b> — задавайте в <code>muiTableBodyCellProps</code> по <code>column.id</code>.</li>
+</ul>
+
+<h2>11. Как загружать данные с сервера</h2>
+
+<h3>11.1 Схема</h3>
+
+<p><code>MRTTree</code> ожидает из <code>ParentPage</code>:</p>
+<ul>
+<li><code>initialData: TData[]</code> — корневые строки (один раз при монтировании);</li>
+<li><code>loadChildren: (row) =&gt; Promise&lt;TData[]&gt;</code> — ленивая загрузка детей (при первом раскрытии).</li>
+</ul>
+
+<h3>11.2 Файл <code>api.ts</code></h3>
+
+<pre>import type { Template } from './TemplateTypes';
+
+const API_URL = '/api';
+
+export async function fetchRoots(signal?: AbortSignal): Promise&lt;Template[]&gt; {
+  const response = await fetch(`${API_URL}/templates/roots`, { signal });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const data = (await response.json()) as { rows: Template[] };
+  return data.rows;
+}
+
+export async function fetchChildren(parent: Template): Promise&lt;Template[]&gt; {
+  const response = await fetch(
+    `${API_URL}/templates/${parent.id}/children`,
+  );
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const data = (await response.json()) as { rows: Template[] };
+  return data.rows;
+}</pre>
+
+<div class="note">Если сервер отдаёт массив напрямую (без обёртки <code>{ rows }</code>) — уберите <code>data.rows</code> и верните <code>(await response.json()) as Template[]</code>.</div>
+
+<h3>11.3 Загрузка корней в ParentPage</h3>
+
+<pre>const [initialData, setInitialData] = useState&lt;Template[]&gt;([]);
+const [initialLoading, setInitialLoading] = useState(true);
+const [initialError, setInitialError] = useState&lt;string | null&gt;(null);
+
+const loadRoots = () =&gt; {
+  const controller = new AbortController();
+  setInitialLoading(true);
+  setInitialError(null);
+
+  fetchRoots(controller.signal)
+    .then((rows) =&gt; setInitialData(rows))
+    .catch((err: unknown) =&gt; {
+      if (err instanceof DOMException &amp;&amp; err.name === 'AbortError') return;
+      setInitialError(err instanceof Error ? err.message : 'Ошибка');
+    })
+    .finally(() =&gt; setInitialLoading(false));
+
+  return () =&gt; controller.abort();
+};
+
+useEffect(() =&gt; {
+  const cancel = loadRoots();
+  return cancel;
+}, []);</pre>
+
+<h3>11.4 Передача в MRTTree</h3>
+
+<pre>&lt;MRTTree&lt;Template&gt;
+  initialData={initialData}
+  ...
+  loadChildren={fetchChildren}
+  canExpand={() =&gt; true}  // при серверной модели
+  ...
+/&gt;</pre>
+
+<h3>11.5 Состояния загрузки / ошибки / пусто</h3>
+
+<pre>if (initialLoading) return &lt;CircularProgress /&gt;;
+if (initialError)   return &lt;Alert severity="error"&gt;{initialError}&lt;/Alert&gt;;
+if (initialData.length === 0) return &lt;Alert severity="info"&gt;Нет данных&lt;/Alert&gt;;</pre>
+
+<h3>11.6 Механика ленивой загрузки детей</h3>
+
+<ol>
+<li>Клик на стрелку → <code>expanded</code> меняется.</li>
+<li><code>useEffect</code> в <code>Tree.tsx</code> видит: строка раскрыта, <code>getSubRows(row) === undefined</code>, <code>canExpand(row) === true</code> → вызывает <code>loadChildren(row)</code>.</li>
+<li>Пока промис не разрешён — <code>isLoading = true</code>, MRT показывает лоадер.</li>
+<li>Ответ → <code>withSubRows(row, children)</code> → <code>setData</code> → дети рендерятся.</li>
+<li>Ошибка → <code>finally</code> снимает <code>isLoading</code>, <code>subRows</code> остаётся <code>undefined</code> → повторный клик отправит запрос снова.</li>
+</ol>
+
+<h3>11.7 Параметр canExpand при серверной загрузке</h3>
+
+<table>
+<tr><th>Вариант</th><th>Код</th><th>Когда</th></tr>
+<tr><td>Всегда true</td><td><code>canExpand={() =&gt; true}</code></td><td>Сервер не отдаёт флаг «есть дети»</td></tr>
+<tr><td>По флагу</td><td><code>canExpand={(row) =&gt; row.hasChildren}</code></td><td>В листинге есть <code>hasChildren</code></td></tr>
+</table>
+
+<div class="warn">Если <code>canExpand</code> вернёт <code>false</code>, стрелки не будет — пользователь не сможет инициировать загрузку детей. Для серверной модели обычно используют <code>() =&gt; true</code>.</div>
+
+<h3>11.8 Чек-лист интеграции</h3>
+<ol>
+<li>Создать <code>api.ts</code> с <code>fetchRoots(signal)</code> и <code>fetchChildren(row)</code>.</li>
+<li>В <code>ParentPage</code> — состояния <code>initialData</code>, <code>initialLoading</code>, <code>initialError</code>.</li>
+<li>В <code>useEffect</code> загрузить корни с <code>AbortController</code>.</li>
+<li>Передать <code>initialData</code> в <code>&lt;MRTTree initialData={initialData} ... /&gt;</code>.</li>
+<li>Передать <code>loadChildren={fetchChildren}</code>.</li>
+<li>Поставить <code>canExpand={() =&gt; true}</code>.</li>
+<li>Добавить рендер состояний: загрузка / ошибка / пусто.</li>
+<li>Проверить, что повторный клик после ошибки отправляет запрос снова.</li>
+</ol>
+
+</body>
+</html>

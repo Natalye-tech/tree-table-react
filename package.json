@@ -1,76 +1,66 @@
 {
   "name": "mui-tanstack-tree-table",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "mock": "tsx src/mocks/server.ts",
+    "dev:mock": "concurrently \"npm run mock\" \"npm run dev\"",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "npm run lint -- --fix",
+    "prepare": "husky install"
+  },
   "dependencies": {
     "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.11.5",
-    "@mui/icons-material": "^7.0.2",
-    "@mui/material": "^7.0.2",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^6.0.0",
+    "@mui/material": "^6.0.0",
+    "@mui/x-date-pickers": "^7.15.0",
+    "@reduxjs/toolkit": "^2.0.0",
     "@tanstack/react-query": "^5.0.0",
     "@tanstack/react-table": "^8.21.3",
     "ag-grid-community": "^36.2.0",
     "ag-grid-react": "^36.2.0",
-    "material-react-table": "^2.11.0",
+    "material-react-table": "^3.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^7.5.1",
-    "react-scripts": "^5.0.1"
+    "react-redux": "^9.0.0",
+    "react-router-dom": "^7.5.1"
   },
   "devDependencies": {
-    "@tanstack/react-query-devtools": "^5.0.0",
+    "@faker-js/faker": "^9.0.0",
+    "@msw/data": "^1.1.7",
+    "@mswjs/http-middleware": "^0.10.3",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^14.6.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "@types/node": "^22.14.1",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.7.0",
+    "concurrently": "^9.0.0",
+    "cors": "^2.8.5",
+    "eslint": "^9.0.0",
+    "express": "^4.21.0",
     "husky": "^9.1.7",
+    "jsdom": "^25.0.0",
     "lint-staged": "^15.5.1",
+    "msw": "^2.0.0",
     "prettier": "^3.5.3",
-    "typescript": "^4.9.5"
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vite": "^6.0.0",
+    "vitest": "^2.0.0",
+    "zod": "^4.6.7"
   },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "prepare": "husky install",
-    "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "lint:fix": "npm run lint -- --fix"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  },
-  "jest": {
-    "collectCoverageFrom": [
-      "src/**/*.{js,jsx,ts,tsx}",
-      "!src/index.tsx",
-      "!src/serviceWorker.ts",
-      "!src/reportWebVitals.ts"
-    ],
-    "coverageThreshold": {
-      "global": {
-        "branches": 80,
-        "functions": 80,
-        "lines": 80,
-        "statements": 80
-      }
-    }
+  "msw": {
+    "workerDirectory": "public"
   }
 }
