@@ -41,7 +41,7 @@ th {
 @keyframes mrt-row-appear {
   from {
     opacity: 0;
-    transform: translateY(-88px);
+    transform: translateY(-8px);
   }
   to {
     opacity: 1;

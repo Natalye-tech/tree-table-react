@@ -9,6 +9,7 @@ import {
   type MRT_RowSelectionState,
 } from 'material-react-table';
 import { MRT_Localization_RU } from 'material-react-table/locales/ru';
+import type { OnChangeFn } from '@tanstack/react-table';
 import {
   Box,
   Collapse,
@@ -19,7 +20,6 @@ import {
   Menu,
   MenuItem,
   Radio,
-  Stack,
   Tooltip,
   useTheme,
 } from '@mui/material';
@@ -48,8 +48,6 @@ const FILTER_BOTTOM_PADDING = 4;
 const DEFAULT_ROWS_PER_PAGE_OPTIONS = [5, 10, 25, 50, 100];
 const DEFAULT_INITIAL_PAGE_SIZE = 10;
 
-const PAGINATION_LABEL_SIZE = '0.7rem';
-const PAGINATION_VALUE_SIZE = '0.9rem';
 const BOTTOM_TOOLBAR_HEIGHT = 40;
 
 const EXPAND_BASE_LEFT = 5;
@@ -58,58 +56,17 @@ const EXPAND_HEADER_EXTRA_LEFT = 5;
 const TABLE_EXTRA_BORDER_RADIUS = 3;
 const SEARCH_FIELD_EXTRA_BORDER_RADIUS = 4;
 
-// ─── Размеры тулбара и поля поиска ──────────────────────────────────────────
+// ❗️ Разные размеры: метка меньше, значения — стандартные (14px)
+const PAGINATION_LABEL_SIZE = '0.75rem';
+const PAGINATION_VALUE_SIZE = '0.875rem';
+
+// ─── Размеры тулбара ────────────────────────────────────────────────────────
 
 const TOP_TOOLBAR_HEIGHT = 43;
-const TOOLBAR_CONTENT_HEIGHT = 32;
-
-const SEARCH_FIELD_MIN_WIDTH = 230;
+const SEARCH_FIELD_MIN_WIDTH = 160;
 const SEARCH_FIELD_MAX_WIDTH = 270;
-const SEARCH_FIELD_HEIGHT = TOOLBAR_CONTENT_HEIGHT;
-
-const TOOLBAR_CONTENT_OFFSET_DOWN = 14;
-const TOOLBAR_CONTENT_RIGHT_OFFSET = 8;
-
-// ─── Анимация появления дочерних строк ──────────────────────────────────────
-
-/**
- * Длительность анимации появления дочерних строк (мс).
- * Должна совпадать с `@keyframes mrt-row-appear` в `src/index.css`.
- */
+const SEARCH_FIELD_HEIGHT = 32;
 const ROW_APPEAR_ANIMATION_DURATION = 200;
-
-const compactToolbarSx = {
-  minHeight: TOP_TOOLBAR_HEIGHT,
-  height: TOP_TOOLBAR_HEIGHT,
-  paddingTop: 0,
-  paddingBottom: 0,
-  paddingLeft: 0,
-  paddingRight: 0,
-  display: 'flex',
-  alignItems: 'center',
-  position: 'relative' as const,
-  overflow: 'visible' as const,
-  '& .MuiToolbar-root': {
-    minHeight: `${TOP_TOOLBAR_HEIGHT}px !important`,
-    height: TOP_TOOLBAR_HEIGHT,
-    paddingTop: '0 !important',
-    paddingBottom: '0 !important',
-    paddingLeft: '8px',
-    paddingRight: '0',
-    display: 'flex',
-    alignItems: 'center',
-    width: '100%',
-    boxSizing: 'border-box',
-    position: 'relative' as const,
-    overflow: 'visible' as const,
-  },
-  '& .MuiIconButton-root': { padding: '4px' },
-  '& .MuiButton-root': {
-    paddingTop: '2px',
-    paddingBottom: '2px',
-    minHeight: '28px',
-  },
-} as const;
 
 // ────────────────────────────────────────────────────────────────────────────
 // ЛОКАЛЬНЫЕ ТИПЫ
@@ -120,6 +77,12 @@ type ContextMenuState<TData> = {
   mouseY: number;
   row: TData;
 } | null;
+
+/** Проверяет, раскрыта ли строка в заданном состоянии */
+const checkExpanded = (state: MRT_ExpandedState, id: string) => {
+  if (state === true) return true;
+  return !!state[id];
+};
 
 // ────────────────────────────────────────────────────────────────────────────
 // КОМПОНЕНТ
@@ -176,6 +139,22 @@ export const MRTTree = <TData extends MRT_RowData,>({
   const [contextMenu, setContextMenu] =
     useState<ContextMenuState<TData> | null>(null);
 
+  // Refs для управления анимацией исчезновения
+  const expandedRef = useRef(expanded);
+  const nextExpandedRef = useRef<MRT_ExpandedState>(expanded);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    expandedRef.current = expanded;
+  }, [expanded]);
+
+  // Очистка таймера при размонтировании
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
   const prevInitialDataRef = useRef(initialData);
   useEffect(() => {
     if (prevInitialDataRef.current !== initialData) {
@@ -196,6 +175,38 @@ export const MRTTree = <TData extends MRT_RowData,>({
 
   const actuallyCanExpand = (rowOriginal: TData): boolean =>
     canExpand ? canExpand(rowOriginal) : true;
+
+  // Перехват изменения раскрытия для анимации исчезновения
+  const handleExpandedChange: OnChangeFn<MRT_ExpandedState> = (updater) => {
+    const currentExpanded = expandedRef.current;
+    const next =
+      typeof updater === 'function' ? updater(currentExpanded) : updater;
+    nextExpandedRef.current = next;
+
+    let hasCollapse = false;
+    if (currentExpanded !== true) {
+      for (const id of Object.keys(currentExpanded)) {
+        if (currentExpanded[id] && !checkExpanded(next, id)) {
+          hasCollapse = true;
+          break;
+        }
+      }
+    }
+
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+
+    if (hasCollapse) {
+      timerRef.current = setTimeout(() => {
+        setExpanded(next);
+        timerRef.current = null;
+      }, ROW_APPEAR_ANIMATION_DURATION);
+    } else {
+      setExpanded(next);
+    }
+  };
 
   // Ленивая подгрузка детей
   useEffect(() => {
@@ -276,8 +287,8 @@ export const MRTTree = <TData extends MRT_RowData,>({
     textTransform: 'uppercase' as const,
     letterSpacing: '0.05em',
     borderBottom: `0px solid ${theme.palette.divider}`,
-    borderRight: 'none',
-    borderLeft: 'none',
+    borderRight: 'none !important',
+    borderLeft: 'none !important',
     lineHeight: 1.2,
     paddingLeft: `${TEXT_LEFT}px`,
     paddingRight: '12px',
@@ -292,8 +303,8 @@ export const MRTTree = <TData extends MRT_RowData,>({
     textTransform: 'uppercase' as const,
     letterSpacing: '0.05em',
     borderBottom: `0px solid ${theme.palette.divider}`,
-    borderRight: 'none',
-    borderLeft: 'none',
+    borderRight: 'none !important',
+    borderLeft: 'none !important',
     lineHeight: 1.2,
     paddingLeft: `${TEXT_LEFT}px`,
     paddingRight: '12px',
@@ -319,19 +330,22 @@ export const MRTTree = <TData extends MRT_RowData,>({
   const compactBottomToolbarSx = {
     minHeight: BOTTOM_TOOLBAR_HEIGHT,
     height: BOTTOM_TOOLBAR_HEIGHT,
+    maxHeight: BOTTOM_TOOLBAR_HEIGHT,
     padding: 0,
     margin: 0,
     display: 'flex',
     alignItems: 'center',
     backgroundColor: headerBg,
-    borderTop: `1px solid ${theme.palette.divider}`,
+    borderTop: `0px solid ${theme.palette.divider}`,
+    overflow: 'hidden',
     '& .MuiToolbar-root': {
       minHeight: `${BOTTOM_TOOLBAR_HEIGHT}px !important`,
-      height: BOTTOM_TOOLBAR_HEIGHT,
+      height: `${BOTTOM_TOOLBAR_HEIGHT}px !important`,
+      maxHeight: `${BOTTOM_TOOLBAR_HEIGHT}px !important`,
       paddingTop: '0 !important',
       paddingBottom: '0 !important',
-      paddingLeft: '8px',
-      paddingRight: '0',
+      paddingLeft: '8px !important',
+      paddingRight: '0 !important',
       display: 'flex',
       alignItems: 'center',
       width: '100%',
@@ -344,7 +358,7 @@ export const MRTTree = <TData extends MRT_RowData,>({
       height: BOTTOM_TOOLBAR_HEIGHT,
       padding: 0,
       margin: 0,
-      color: theme.palette.text.secondary,
+      paddingRight: '16px !important', 
       width: '100%',
     },
     '& .MuiTablePagination-toolbar': {
@@ -358,27 +372,23 @@ export const MRTTree = <TData extends MRT_RowData,>({
       paddingRight: '0 !important',
       width: '100%',
     },
-    '& .MuiTablePagination-selectLabel': {
+    '& .MuiTablePagination-selectLabel, & .MuiTablePagination-selectLabel *': {
       fontSize: `${PAGINATION_LABEL_SIZE} !important`,
       fontWeight: 400,
-      textTransform: 'none',
-      letterSpacing: 0,
       color: theme.palette.text.secondary,
       margin: 0,
       marginRight: 8,
-      lineHeight: 1,
+      lineHeight: 1.5,
       display: 'inline-flex',
       alignItems: 'center',
     },
-    '& .MuiTablePagination-displayedRows': {
+    '& .MuiTablePagination-displayedRows, & .MuiTablePagination-displayedRows *': {
       fontSize: `${PAGINATION_VALUE_SIZE} !important`,
-      fontWeight: 600,
-      textTransform: 'uppercase',
-      letterSpacing: '0.05em',
+      fontWeight: 400,
       color: theme.palette.text.secondary,
       margin: 0,
       marginLeft: 12,
-      lineHeight: 1,
+      lineHeight: 1.5,
       display: 'inline-flex',
       alignItems: 'center',
     },
@@ -390,25 +400,22 @@ export const MRTTree = <TData extends MRT_RowData,>({
     '& .MuiTablePagination-input .MuiInputBase-root': {
       height: 28,
       minHeight: 28,
-      fontSize: PAGINATION_VALUE_SIZE,
+      fontSize: `${PAGINATION_VALUE_SIZE} !important`,
       display: 'flex',
       alignItems: 'center',
     },
-    '& .MuiSelect-select.MuiTablePagination-select, & .MuiTablePagination-select.MuiSelect-select':
-      {
-        fontSize: `${PAGINATION_VALUE_SIZE} !important`,
-        fontWeight: 600,
-        textTransform: 'uppercase',
-        letterSpacing: '0.05em',
-        paddingTop: 4,
-        paddingBottom: 4,
-        paddingLeft: 6,
-        paddingRight: 22,
-        minHeight: 'auto',
-        lineHeight: 1.2,
-        display: 'flex',
-        alignItems: 'center',
-      },
+    '& .MuiSelect-select.MuiTablePagination-select, & .MuiTablePagination-select.MuiSelect-select, & .MuiTablePagination-select *': {
+      fontSize: `${PAGINATION_VALUE_SIZE} !important`,
+      fontWeight: 400,
+      paddingTop: 4,
+      paddingBottom: 4,
+      paddingLeft: 6,
+      paddingRight: 22,
+      minHeight: 'auto',
+      lineHeight: 1.2,
+      display: 'flex',
+      alignItems: 'center',
+    },
     '& .MuiTablePagination-input .MuiSvgIcon-root': { fontSize: '1rem' },
     '& .MuiTablePagination-actions': {
       marginLeft: 8,
@@ -452,7 +459,7 @@ export const MRTTree = <TData extends MRT_RowData,>({
     enableExpandAll: true,
     getRowId,
     getSubRows,
-    onExpandedChange: setExpanded,
+    onExpandedChange: handleExpandedChange, // ❗️ Используем кастомный обработчик
 
     enableRowSelection: hasSelection,
     enableSubRowSelection: false,
@@ -584,135 +591,115 @@ export const MRTTree = <TData extends MRT_RowData,>({
     enableColumnResizing: true,
     columnResizeMode: 'onChange',
 
-    muiTopToolbarProps: { sx: compactToolbarSx },
     muiBottomToolbarProps: { sx: compactBottomToolbarSx },
 
-    ...(toolbar ?? {}),
-
-    renderToolbarInternalActions: ({ table: t }) => {
-      const userContent = userToolbarRender?.({ table: t });
+    renderTopToolbar: ({ table: t }) => {
+      const internalActions = userToolbarRender?.({ table: t });
 
       return (
         <Box
           sx={{
-            position: 'absolute',
-            top: '50%',
-            right: TOOLBAR_CONTENT_RIGHT_OFFSET,
-            transform: `translateY(calc(-50% + ${TOOLBAR_CONTENT_OFFSET_DOWN}px))`,
-            height: TOOLBAR_CONTENT_HEIGHT,
-            minHeight: TOOLBAR_CONTENT_HEIGHT,
+            height: TOP_TOOLBAR_HEIGHT,
+            minHeight: TOP_TOOLBAR_HEIGHT,
+            maxHeight: TOP_TOOLBAR_HEIGHT,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'flex-end',
-            paddingTop: 0,
-            paddingBottom: 0,
+            padding: '0 8px',
+            gap: 0.5,
+            background: headerBg,
+            borderBottom: `0px solid ${theme.palette.divider}`,
+            boxSizing: 'border-box',
+            overflow: 'hidden',
+            flexWrap: 'nowrap',
           }}
         >
-          <Stack
-            direction="row"
-            spacing={0.5}
+          <Collapse
+            in={showSearch}
+            orientation="horizontal"
+            timeout={200}
+            unmountOnExit
             sx={{
+              height: '100%',
+              display: 'flex',
               alignItems: 'center',
-              justifyContent: 'flex-end',
-              height: TOOLBAR_CONTENT_HEIGHT,
-              minHeight: TOOLBAR_CONTENT_HEIGHT,
-              paddingTop: 0,
-              paddingBottom: 0,
-              '& .MuiIconButton-root': {
-                height: 28,
-                width: 28,
-                minHeight: 28,
-                minWidth: 28,
-                padding: 0,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              },
-              '& .MuiToggleButton-root': {
-                height: 28,
-                minWidth: 28,
-                padding: '4px',
-              },
-              '& .MuiTypography-root': {
-                lineHeight: 1,
-                display: 'inline-flex',
-                alignItems: 'center',
-                height: 28,
-              },
             }}
           >
-            <Collapse
-              in={showSearch}
-              orientation="horizontal"
-              timeout={200}
-              unmountOnExit
+            <Box
               sx={{
-                height: TOOLBAR_CONTENT_HEIGHT,
-                minHeight: TOOLBAR_CONTENT_HEIGHT,
                 display: 'flex',
                 alignItems: 'center',
+                height: '100%',
+                pr: 1,
               }}
             >
-              <Box
+              <MRT_GlobalFilterTextField
+                table={t}
                 sx={{
-                  height: TOOLBAR_CONTENT_HEIGHT,
-                  minHeight: TOOLBAR_CONTENT_HEIGHT,
-                  display: 'flex',
-                  alignItems: 'center',
+                  minWidth: SEARCH_FIELD_MIN_WIDTH,
+                  maxWidth: SEARCH_FIELD_MAX_WIDTH,
+                  width: '100%',
+                  height: SEARCH_FIELD_HEIGHT,
+                  '& .MuiFormControl-root, & .MuiTextField-root': {
+                    height: SEARCH_FIELD_HEIGHT,
+                    minHeight: SEARCH_FIELD_HEIGHT,
+                    maxHeight: SEARCH_FIELD_HEIGHT,
+                    margin: 0,
+                    minWidth: 0,
+                  },
+                  '& .MuiInputBase-root': {
+                    height: SEARCH_FIELD_HEIGHT,
+                    minHeight: SEARCH_FIELD_HEIGHT,
+                    maxHeight: SEARCH_FIELD_HEIGHT,
+                    fontSize: '0.75rem',
+                    borderRadius: `${theme.shape.borderRadius + SEARCH_FIELD_EXTRA_BORDER_RADIUS}px`,
+                    minWidth: 0,
+                  },
+                  '& .MuiOutlinedInput-input': {
+                    padding: '4px 8px',
+                    height: SEARCH_FIELD_HEIGHT - 8,
+                    borderRadius: 'inherit',
+                    minWidth: 0,
+                  },
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderRadius: 'inherit',
+                  },
+                  '& .MuiInputAdornment-root': {
+                    marginRight: 0,
+                    height: SEARCH_FIELD_HEIGHT,
+                    maxHeight: SEARCH_FIELD_HEIGHT,
+                    '& .MuiSvgIcon-root': { fontSize: '1rem' },
+                  },
+                }}
+              />
+            </Box>
+          </Collapse>
+
+          {showSearchButton && (
+            <Tooltip title={showSearch ? 'Скрыть поиск' : 'Поиск'} arrow>
+              <IconButton
+                size="small"
+                aria-label={showSearch ? 'Скрыть поиск' : 'Показать поиск'}
+                onClick={() => setShowSearch((v) => !v)}
+                sx={{
+                  flexShrink: 0,
+                  height: 28,
+                  width: 28,
+                  minHeight: 28,
+                  minWidth: 28,
+                  maxHeight: 28,
                 }}
               >
-                <MRT_GlobalFilterTextField
-                  table={t}
-                  sx={{
-                    minWidth: SEARCH_FIELD_MIN_WIDTH,
-                    maxWidth: SEARCH_FIELD_MAX_WIDTH,
-                    height: SEARCH_FIELD_HEIGHT,
-                    '& .MuiFormControl-root, & .MuiTextField-root': {
-                      height: SEARCH_FIELD_HEIGHT,
-                      minHeight: SEARCH_FIELD_HEIGHT,
-                      margin: 0,
-                    },
-                    '& .MuiInputBase-root': {
-                      height: SEARCH_FIELD_HEIGHT,
-                      minHeight: SEARCH_FIELD_HEIGHT,
-                      fontSize: '0.75rem',
-                      borderRadius: `${theme.shape.borderRadius + SEARCH_FIELD_EXTRA_BORDER_RADIUS}px`,
-                    },
-                    '& .MuiOutlinedInput-input': {
-                      padding: '4px 8px',
-                      height: SEARCH_FIELD_HEIGHT - 8,
-                      borderRadius: 'inherit',
-                    },
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderRadius: 'inherit',
-                    },
-                    '& .MuiInputAdornment-root': {
-                      marginRight: 0,
-                      '& .MuiSvgIcon-root': { fontSize: '1rem' },
-                    },
-                  }}
-                />
-              </Box>
-            </Collapse>
+                {showSearch ? (
+                  <SearchOffIcon fontSize="small" />
+                ) : (
+                  <SearchIcon fontSize="small" />
+                )}
+              </IconButton>
+            </Tooltip>
+          )}
 
-            {showSearchButton && (
-              <Tooltip title={showSearch ? 'Скрыть поиск' : 'Поиск'} arrow>
-                <IconButton
-                  size="small"
-                  aria-label={showSearch ? 'Скрыть поиск' : 'Показать поиск'}
-                  onClick={() => setShowSearch((v) => !v)}
-                >
-                  {showSearch ? (
-                    <SearchOffIcon fontSize="small" />
-                  ) : (
-                    <SearchIcon fontSize="small" />
-                  )}
-                </IconButton>
-              </Tooltip>
-            )}
-
-            {userContent}
-          </Stack>
+          {internalActions}
         </Box>
       );
     },
@@ -723,13 +710,33 @@ export const MRTTree = <TData extends MRT_RowData,>({
         borderRadius: `${theme.shape.borderRadius + TABLE_EXTRA_BORDER_RADIUS}px`,
         overflow: 'hidden',
         border: `1px solid ${theme.palette.divider}`,
+        display: 'flex',
+        flexDirection: 'column',
       },
     },
+
+    muiTableContainerProps: {
+      sx: {
+        flex: '1 1 auto',
+        minHeight: 0,
+        height: 'auto',
+        maxHeight: 'none',
+        overflow: 'auto',
+      },
+    },
+
     muiTableProps: {
       sx: {
         borderCollapse: 'separate',
         borderSpacing: 0,
         tableLayout: 'fixed',
+        '& .MuiTableCell-root': {
+          borderRight: 'none !important',
+          borderLeft: 'none !important',
+        },
+        '& .Mui-TableHeadCell-ResizeHandle-Divider': {
+          borderRight: 'none !important',
+        },
       },
     },
 
@@ -743,8 +750,8 @@ export const MRTTree = <TData extends MRT_RowData,>({
             sx: {
               backgroundColor: headerBg,
               borderBottom: `0px solid ${theme.palette.divider}`,
-              borderRight: 'none',
-              borderLeft: 'none',
+              borderRight: 'none !important',
+              borderLeft: 'none !important',
               verticalAlign: 'top' as const,
               paddingTop: 0,
               paddingBottom: 0,
@@ -767,8 +774,8 @@ export const MRTTree = <TData extends MRT_RowData,>({
           sx: {
             backgroundColor: headerBg,
             borderBottom: `0px solid ${theme.palette.divider}`,
-            borderRight: 'none',
-            borderLeft: 'none',
+            borderRight: 'none !important',
+            borderLeft: 'none !important',
             ...(isExpand ? { padding: 0 } : {}),
             ...cellCenterSx(headerHeight),
           },
@@ -788,8 +795,8 @@ export const MRTTree = <TData extends MRT_RowData,>({
         return {
           sx: {
             borderBottom: `0px solid ${theme.palette.divider}`,
-            borderRight: 'none',
-            borderLeft: 'none',
+            borderRight: 'none !important',
+            borderLeft: 'none !important',
             ...cellCenterSx(rowHeight),
           },
         };
@@ -799,8 +806,8 @@ export const MRTTree = <TData extends MRT_RowData,>({
         return {
           sx: {
             borderBottom: `0px solid ${theme.palette.divider}`,
-            borderRight: 'none',
-            borderLeft: 'none',
+            borderRight: 'none !important',
+            borderLeft: 'none !important',
             padding: 0,
             ...cellCenterSx(rowHeight),
             '& > .MuiBox-root, & > .MuiStack-root, & > div': {
@@ -820,8 +827,8 @@ export const MRTTree = <TData extends MRT_RowData,>({
         sx: {
           fontSize: '0.875rem',
           borderBottom: `0px solid ${theme.palette.divider}`,
-          borderRight: 'none',
-          borderLeft: 'none',
+          borderRight: 'none !important',
+          borderLeft: 'none !important',
           lineHeight: 1.2,
           paddingLeft: `${TEXT_LEFT}px`,
           paddingRight: '12px',
@@ -830,9 +837,6 @@ export const MRTTree = <TData extends MRT_RowData,>({
       };
     },
 
-    // ────────────────────────────────────────────────────────────────────
-    // Строка: кастомный фон + hover/selected + контекстное меню + анимация
-    // ────────────────────────────────────────────────────────────────────
     muiTableBodyRowProps: ({ row }) => {
       const customBg = getRowBackgroundColor?.(row.original as TData);
 
@@ -849,16 +853,33 @@ export const MRTTree = <TData extends MRT_RowData,>({
           }
         : undefined;
 
+      // ❗️ Проверяем, исчезает ли эта строка (является ли предок схлопывающимся)
+      const isDisappearing = (() => {
+        if (!timerRef.current) return false;
+        let current = row.getParentRow();
+        while (current) {
+          if (
+            checkExpanded(expanded, current.id) &&
+            !checkExpanded(nextExpandedRef.current, current.id)
+          ) {
+            return true;
+          }
+          current = current.getParentRow();
+        }
+        return false;
+      })();
+
       return {
         onContextMenu,
         sx: {
           height: rowHeight,
           transition: 'filter 0.15s ease',
-          // ❗️ Плавное появление только для дочерних строк.
-          // Корневые строки (depth = 0) появляются мгновенно при загрузке.
+          // ❗️ Применяем нужную анимацию: появление или исчезновение
           ...(row.depth > 0
             ? {
-                animation: `mrt-row-appear ${ROW_APPEAR_ANIMATION_DURATION}ms ease-out`,
+                animation: isDisappearing
+                  ? `mrt-row-disappear ${ROW_APPEAR_ANIMATION_DURATION}ms ease-in forwards`
+                  : `mrt-row-appear ${ROW_APPEAR_ANIMATION_DURATION}ms ease-out`,
               }
             : {}),
           ...(customBg ? { backgroundColor: customBg } : {}),
