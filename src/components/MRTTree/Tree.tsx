@@ -23,8 +23,8 @@ import {
   Tooltip,
   useTheme,
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import KeyboardDoubleArrowDownIcon from '@mui/icons-material/KeyboardDoubleArrowDown';
+import KeyboardDoubleArrowUpIcon from '@mui/icons-material/KeyboardDoubleArrowUp';
 import SearchIcon from '@mui/icons-material/Search';
 import SearchOffIcon from '@mui/icons-material/SearchOff';
 
@@ -41,31 +41,29 @@ export type {
 // КОНСТАНТЫ
 // ────────────────────────────────────────────────────────────────────────────
 
-const TEXT_LEFT = 12;
+const TEXT_LEFT = 16;
 const FILTER_ROW_EXTRA_HEIGHT = 32;
 const FILTER_BOTTOM_PADDING = 4;
 
 const DEFAULT_ROWS_PER_PAGE_OPTIONS = [5, 10, 25, 50, 100];
 const DEFAULT_INITIAL_PAGE_SIZE = 10;
 
-const BOTTOM_TOOLBAR_HEIGHT = 40;
-
-const EXPAND_BASE_LEFT = 5;
-const EXPAND_HEADER_EXTRA_LEFT = 5;
+const BOTTOM_TOOLBAR_HEIGHT = 52;
+const EXPAND_BASE_LEFT = 8;
+const EXPAND_HEADER_EXTRA_LEFT = 0;
 
 const TABLE_EXTRA_BORDER_RADIUS = 3;
 const SEARCH_FIELD_EXTRA_BORDER_RADIUS = 4;
 
-// ❗️ Разные размеры: метка меньше, значения — стандартные (14px)
-const PAGINATION_LABEL_SIZE = '0.75rem';
+const HEADER_FONT_SIZE = '0.875rem';
+const CELL_FONT_SIZE = '0.875rem';
+const PAGINATION_LABEL_SIZE = '0.875rem';
 const PAGINATION_VALUE_SIZE = '0.875rem';
 
-// ─── Размеры тулбара ────────────────────────────────────────────────────────
-
-const TOP_TOOLBAR_HEIGHT = 43;
+const TOP_TOOLBAR_HEIGHT = 52;
 const SEARCH_FIELD_MIN_WIDTH = 160;
 const SEARCH_FIELD_MAX_WIDTH = 270;
-const SEARCH_FIELD_HEIGHT = 32;
+const SEARCH_FIELD_HEIGHT = 40;
 const ROW_APPEAR_ANIMATION_DURATION = 200;
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -78,7 +76,6 @@ type ContextMenuState<TData> = {
   row: TData;
 } | null;
 
-/** Проверяет, раскрыта ли строка в заданном состоянии */
 const checkExpanded = (state: MRT_ExpandedState, id: string) => {
   if (state === true) return true;
   return !!state[id];
@@ -97,8 +94,8 @@ export const MRTTree = <TData extends MRT_RowData,>({
   loadChildren,
   canExpand,
   toolbar,
-  rowHeight = 34,
-  headerHeight = 32,
+  rowHeight = 52,
+  headerHeight = 56,
   checkboxSize = 'small',
   indentPx = 35,
   selectionMode = 'checkbox',
@@ -139,7 +136,6 @@ export const MRTTree = <TData extends MRT_RowData,>({
   const [contextMenu, setContextMenu] =
     useState<ContextMenuState<TData> | null>(null);
 
-  // Refs для управления анимацией исчезновения
   const expandedRef = useRef(expanded);
   const nextExpandedRef = useRef<MRT_ExpandedState>(expanded);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -148,7 +144,6 @@ export const MRTTree = <TData extends MRT_RowData,>({
     expandedRef.current = expanded;
   }, [expanded]);
 
-  // Очистка таймера при размонтировании
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -176,7 +171,6 @@ export const MRTTree = <TData extends MRT_RowData,>({
   const actuallyCanExpand = (rowOriginal: TData): boolean =>
     canExpand ? canExpand(rowOriginal) : true;
 
-  // Перехват изменения раскрытия для анимации исчезновения
   const handleExpandedChange: OnChangeFn<MRT_ExpandedState> = (updater) => {
     const currentExpanded = expandedRef.current;
     const next =
@@ -208,7 +202,6 @@ export const MRTTree = <TData extends MRT_RowData,>({
     }
   };
 
-  // Ленивая подгрузка детей
   useEffect(() => {
     const load = async () => {
       const expandedRecord =
@@ -283,15 +276,11 @@ export const MRTTree = <TData extends MRT_RowData,>({
     backgroundColor: headerBg,
     color: theme.palette.text.secondary,
     fontWeight: 600,
-    fontSize: '0.75rem',
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.05em',
+    fontSize: HEADER_FONT_SIZE,
     borderBottom: `0px solid ${theme.palette.divider}`,
-    borderRight: 'none !important',
-    borderLeft: 'none !important',
-    lineHeight: 1.2,
+    lineHeight: 1.5,
     paddingLeft: `${TEXT_LEFT}px`,
-    paddingRight: '12px',
+    paddingRight: '16px',
     ...cellCenterSx(headerHeight),
   };
 
@@ -299,15 +288,11 @@ export const MRTTree = <TData extends MRT_RowData,>({
     backgroundColor: headerBg,
     color: theme.palette.text.secondary,
     fontWeight: 600,
-    fontSize: '0.75rem',
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.05em',
+    fontSize: HEADER_FONT_SIZE,
     borderBottom: `0px solid ${theme.palette.divider}`,
-    borderRight: 'none !important',
-    borderLeft: 'none !important',
-    lineHeight: 1.2,
+    lineHeight: 1.5,
     paddingLeft: `${TEXT_LEFT}px`,
-    paddingRight: '12px',
+    paddingRight: '16px',
     paddingTop: 0,
     paddingBottom: `${FILTER_BOTTOM_PADDING}px`,
     verticalAlign: 'top' as const,
@@ -327,6 +312,7 @@ export const MRTTree = <TData extends MRT_RowData,>({
     },
   };
 
+  // ❗️ Стили нижнего тулбара с защитой от переноса строк
   const compactBottomToolbarSx = {
     minHeight: BOTTOM_TOOLBAR_HEIGHT,
     height: BOTTOM_TOOLBAR_HEIGHT,
@@ -337,7 +323,8 @@ export const MRTTree = <TData extends MRT_RowData,>({
     alignItems: 'center',
     backgroundColor: headerBg,
     borderTop: `0px solid ${theme.palette.divider}`,
-    overflow: 'hidden',
+    flexWrap: 'nowrap',
+    overflow: 'hidden', overflow: 'hidden',
     '& .MuiToolbar-root': {
       minHeight: `${BOTTOM_TOOLBAR_HEIGHT}px !important`,
       height: `${BOTTOM_TOOLBAR_HEIGHT}px !important`,
@@ -350,6 +337,8 @@ export const MRTTree = <TData extends MRT_RowData,>({
       alignItems: 'center',
       width: '100%',
       boxSizing: 'border-box',
+      flexWrap: 'nowrap',
+      overflow: 'hidden',
     },
     '& .MuiTablePagination-root': {
       display: 'flex',
@@ -358,8 +347,11 @@ export const MRTTree = <TData extends MRT_RowData,>({
       height: BOTTOM_TOOLBAR_HEIGHT,
       padding: 0,
       margin: 0,
-      paddingRight: '16px !important', 
+      paddingRight: '16px !important',
       width: '100%',
+      // ❗️ Запрещаем перенос строк на корневом уровне
+      flexWrap: 'nowrap',
+      overflow: 'hidden',
     },
     '& .MuiTablePagination-toolbar': {
       display: 'flex',
@@ -371,6 +363,9 @@ export const MRTTree = <TData extends MRT_RowData,>({
       paddingLeft: '0 !important',
       paddingRight: '0 !important',
       width: '100%',
+      // ❗️ Запрещаем перенос строк внутри тулбара пагинации
+      flexWrap: 'nowrap',
+      overflow: 'hidden',
     },
     '& .MuiTablePagination-selectLabel, & .MuiTablePagination-selectLabel *': {
       fontSize: `${PAGINATION_LABEL_SIZE} !important`,
@@ -381,6 +376,9 @@ export const MRTTree = <TData extends MRT_RowData,>({
       lineHeight: 1.5,
       display: 'inline-flex',
       alignItems: 'center',
+      flexWrap: 'nowrap',
+      overflow: 'hidden',
+      whiteSpace: 'nowrap', // ❗️ Текст не переносится
     },
     '& .MuiTablePagination-displayedRows, & .MuiTablePagination-displayedRows *': {
       fontSize: `${PAGINATION_VALUE_SIZE} !important`,
@@ -391,18 +389,23 @@ export const MRTTree = <TData extends MRT_RowData,>({
       lineHeight: 1.5,
       display: 'inline-flex',
       alignItems: 'center',
+      flexWrap: 'nowrap',
+      overflow: 'hidden',
+      whiteSpace: 'nowrap', // ❗️ Текст не переносится
     },
     '& .MuiTablePagination-input': {
       display: 'inline-flex',
       alignItems: 'center',
-      height: 28,
+      height: 40,
     },
     '& .MuiTablePagination-input .MuiInputBase-root': {
-      height: 28,
-      minHeight: 28,
+      height: 40,
+      minHeight: 40,
       fontSize: `${PAGINATION_VALUE_SIZE} !important`,
       display: 'flex',
       alignItems: 'center',
+      flexWrap: 'nowrap',
+      overflow: 'hidden',
     },
     '& .MuiSelect-select.MuiTablePagination-select, & .MuiTablePagination-select.MuiSelect-select, & .MuiTablePagination-select *': {
       fontSize: `${PAGINATION_VALUE_SIZE} !important`,
@@ -415,25 +418,33 @@ export const MRTTree = <TData extends MRT_RowData,>({
       lineHeight: 1.2,
       display: 'flex',
       alignItems: 'center',
+      flexWrap: 'nowrap',
+      overflow: 'hidden',
     },
-    '& .MuiTablePagination-input .MuiSvgIcon-root': { fontSize: '1rem' },
+    '& .MuiTablePagination-input .MuiSvgIcon-root': { fontSize: '1.25rem' },
     '& .MuiTablePagination-actions': {
       marginLeft: 8,
       display: 'flex',
       alignItems: 'center',
+      // ❗️ Кнопки навигации не сжимаются и не переносятся
+      flexShrink: 0,
+      flexWrap: 'nowrap',
+      overflow: 'hidden',
     },
     '& .MuiTablePagination-actions .MuiIconButton-root': {
-      height: 28,
-      width: 28,
-      minHeight: 28,
-      minWidth: 28,
+      height: 40,
+      width: 40,
+      minHeight: 40,
+      minWidth: 40,
       padding: 0,
       display: 'inline-flex',
       alignItems: 'center',
       justifyContent: 'center',
       color: theme.palette.text.secondary,
+      flexWrap: 'nowrap',
+      overflow: 'hidden',
     },
-    '& .MuiTablePagination-actions .MuiSvgIcon-root': { fontSize: '1.25rem' },
+    '& .MuiTablePagination-actions .MuiSvgIcon-root': { fontSize: '1.5rem' },
   } as const;
 
   const userToolbarRender = toolbar?.renderToolbarInternalActions;
@@ -459,7 +470,7 @@ export const MRTTree = <TData extends MRT_RowData,>({
     enableExpandAll: true,
     getRowId,
     getSubRows,
-    onExpandedChange: handleExpandedChange, // ❗️ Используем кастомный обработчик
+    onExpandedChange: handleExpandedChange,
 
     enableRowSelection: hasSelection,
     enableSubRowSelection: false,
@@ -506,17 +517,17 @@ export const MRTTree = <TData extends MRT_RowData,>({
       );
     },
 
-    muiSelectCheckboxProps: { size: checkboxSize, sx: { padding: '2px' } },
-    muiSelectAllCheckboxProps: { size: checkboxSize, sx: { padding: '2px' } },
+    muiSelectCheckboxProps: { size: checkboxSize, sx: { padding: '4px' } },
+    muiSelectAllCheckboxProps: { size: checkboxSize, sx: { padding: '4px' } },
 
     muiExpandButtonProps: ({ row }) => {
       const canExpandRow = actuallyCanExpand(row.original as TData);
       return {
         size: checkboxSize,
         sx: {
-          padding: '2px',
+          padding: '4px',
           ml: `${EXPAND_BASE_LEFT + row.depth * indentPx}px`,
-          '& .MuiSvgIcon-root': { fontSize: '1.25rem' },
+          '& .MuiSvgIcon-root': { fontSize: '1.5rem' },
         },
         disabled: !canExpandRow,
       };
@@ -554,16 +565,16 @@ export const MRTTree = <TData extends MRT_RowData,>({
               onClick={handleClick}
               disabled={disabled}
               sx={{
-                padding: '2px',
+                padding: '4px',
                 ml: `${EXPAND_BASE_LEFT + EXPAND_HEADER_EXTRA_LEFT}px`,
                 mr: 'auto',
-                '& .MuiSvgIcon-root': { fontSize: '1.25rem' },
+                '& .MuiSvgIcon-root': { fontSize: '1.5rem' },
               }}
             >
               {anyExpanded ? (
-                <ExpandLessIcon fontSize="small" />
+                <KeyboardDoubleArrowUpIcon fontSize="small" />
               ) : (
-                <ExpandMoreIcon fontSize="small" />
+                <KeyboardDoubleArrowDownIcon fontSize="small" />
               )}
             </IconButton>
           );
@@ -580,7 +591,7 @@ export const MRTTree = <TData extends MRT_RowData,>({
                   disabled={!row.getCanSelect()}
                   onChange={row.getToggleSelectedHandler()}
                   size={checkboxSize}
-                  sx={{ padding: '2px' }}
+                  sx={{ padding: '4px' }}
                 />
               ),
             }
@@ -605,8 +616,8 @@ export const MRTTree = <TData extends MRT_RowData,>({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'flex-end',
-            padding: '0 8px',
-            gap: 0.5,
+            padding: '0 16px',
+            gap: 1,
             background: headerBg,
             borderBottom: `0px solid ${theme.palette.divider}`,
             boxSizing: 'border-box',
@@ -651,13 +662,13 @@ export const MRTTree = <TData extends MRT_RowData,>({
                     height: SEARCH_FIELD_HEIGHT,
                     minHeight: SEARCH_FIELD_HEIGHT,
                     maxHeight: SEARCH_FIELD_HEIGHT,
-                    fontSize: '0.75rem',
+                    fontSize: '0.875rem',
                     borderRadius: `${theme.shape.borderRadius + SEARCH_FIELD_EXTRA_BORDER_RADIUS}px`,
                     minWidth: 0,
                   },
                   '& .MuiOutlinedInput-input': {
-                    padding: '4px 8px',
-                    height: SEARCH_FIELD_HEIGHT - 8,
+                    padding: '8px 12px',
+                    height: SEARCH_FIELD_HEIGHT - 16,
                     borderRadius: 'inherit',
                     minWidth: 0,
                   },
@@ -668,7 +679,7 @@ export const MRTTree = <TData extends MRT_RowData,>({
                     marginRight: 0,
                     height: SEARCH_FIELD_HEIGHT,
                     maxHeight: SEARCH_FIELD_HEIGHT,
-                    '& .MuiSvgIcon-root': { fontSize: '1rem' },
+                    '& .MuiSvgIcon-root': { fontSize: '1.25rem' },
                   },
                 }}
               />
@@ -683,11 +694,11 @@ export const MRTTree = <TData extends MRT_RowData,>({
                 onClick={() => setShowSearch((v) => !v)}
                 sx={{
                   flexShrink: 0,
-                  height: 28,
-                  width: 28,
-                  minHeight: 28,
-                  minWidth: 28,
-                  maxHeight: 28,
+                  height: 40,
+                  width: 40,
+                  minHeight: 40,
+                  minWidth: 40,
+                  maxHeight: 40,
                 }}
               >
                 {showSearch ? (
@@ -733,6 +744,7 @@ export const MRTTree = <TData extends MRT_RowData,>({
         '& .MuiTableCell-root': {
           borderRight: 'none !important',
           borderLeft: 'none !important',
+          borderBottom: 'none !important',
         },
         '& .Mui-TableHeadCell-ResizeHandle-Divider': {
           borderRight: 'none !important',
@@ -805,7 +817,7 @@ export const MRTTree = <TData extends MRT_RowData,>({
       if (isExpand) {
         return {
           sx: {
-            borderBottom: `0px solid ${theme.palette.divider}`,
+            borderBottom: `1px solid ${theme.palette.divider}`,
             borderRight: 'none !important',
             borderLeft: 'none !important',
             padding: 0,
@@ -825,13 +837,13 @@ export const MRTTree = <TData extends MRT_RowData,>({
 
       return {
         sx: {
-          fontSize: '0.875rem',
+          fontSize: CELL_FONT_SIZE,
           borderBottom: `0px solid ${theme.palette.divider}`,
           borderRight: 'none !important',
           borderLeft: 'none !important',
-          lineHeight: 1.2,
+          lineHeight: 1.5,
           paddingLeft: `${TEXT_LEFT}px`,
-          paddingRight: '12px',
+          paddingRight: '16px',
           ...cellCenterSx(rowHeight),
         },
       };
@@ -853,7 +865,6 @@ export const MRTTree = <TData extends MRT_RowData,>({
           }
         : undefined;
 
-      // ❗️ Проверяем, исчезает ли эта строка (является ли предок схлопывающимся)
       const isDisappearing = (() => {
         if (!timerRef.current) return false;
         let current = row.getParentRow();
@@ -874,7 +885,6 @@ export const MRTTree = <TData extends MRT_RowData,>({
         sx: {
           height: rowHeight,
           transition: 'filter 0.15s ease',
-          // ❗️ Применяем нужную анимацию: появление или исчезновение
           ...(row.depth > 0
             ? {
                 animation: isDisappearing
