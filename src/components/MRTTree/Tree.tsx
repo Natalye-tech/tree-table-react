@@ -324,7 +324,7 @@ export const MRTTree = <TData extends MRT_RowData,>({
     backgroundColor: headerBg,
     borderTop: `0px solid ${theme.palette.divider}`,
     flexWrap: 'nowrap',
-    overflow: 'hidden', overflow: 'hidden',
+    overflow: 'hidden', // NEW CODE (удален дубликат)
     '& .MuiToolbar-root': {
       minHeight: `${BOTTOM_TOOLBAR_HEIGHT}px !important`,
       height: `${BOTTOM_TOOLBAR_HEIGHT}px !important`,
@@ -536,6 +536,7 @@ export const MRTTree = <TData extends MRT_RowData,>({
     displayColumnDefOptions: {
       'mrt-row-expand': {
         size: indentPx * 3 + 40,
+        enableResizing: true, // NEW CODE
         Header: ({ table: t }) => {
           const rows = t.getRowModel().rows;
           const expandableRows = rows.filter((r) =>
@@ -583,6 +584,7 @@ export const MRTTree = <TData extends MRT_RowData,>({
 
       'mrt-row-select': {
         header: '',
+        enableResizing: true, // NEW CODE
         ...(isRadio
           ? {
               Cell: ({ row }: { row: MRT_Row<TData> }) => (
@@ -746,8 +748,26 @@ export const MRTTree = <TData extends MRT_RowData,>({
           borderLeft: 'none !important',
           borderBottom: 'none !important',
         },
+        // NEW CODE: th не клипает абсолютно-позиционированную ручку ресайза
+        '& .MuiTableCell-head': {
+          overflow: 'visible !important',
+          position: 'relative',
+        },
+        // NEW CODE: Ручка ресайза всегда видима, кликабельна и поверх контента
+        '& .mrt-table-head-resize-button, & .Mui-TableHeadCell-ResizeHandle-Wrapper': {
+          opacity: '1 !important',
+          visibility: 'visible !important',
+          display: 'block !important',
+          zIndex: 4,
+          pointerEvents: 'auto',
+        },
+        // NEW CODE: Видимый разделитель + подсветка при наведении
         '& .Mui-TableHeadCell-ResizeHandle-Divider': {
-          borderRight: 'none !important',
+          borderRight: `1px solid ${theme.palette.divider}`,
+          transition: 'border-color 0.15s ease',
+        },
+        '& .Mui-TableHeadCell-ResizeHandle-Wrapper:hover .Mui-TableHeadCell-ResizeHandle-Divider, & .mrt-table-head-resize-button:hover .Mui-TableHeadCell-ResizeHandle-Divider': {
+          borderRight: `2px solid ${theme.palette.primary.main}`,
         },
       },
     },
@@ -844,6 +864,8 @@ export const MRTTree = <TData extends MRT_RowData,>({
           lineHeight: 1.5,
           paddingLeft: `${TEXT_LEFT}px`,
           paddingRight: '16px',
+          whiteSpace: 'nowrap', // NEW CODE: Запрет переноса строк
+          overflow: 'hidden', // NEW CODE: Обрезка контента
           ...cellCenterSx(rowHeight),
         },
       };
